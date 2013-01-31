@@ -17,7 +17,10 @@ Ops = {
     div   : '/'.charCodeAt(0),
     l     : '<'.charCodeAt(0),
     g     : '>'.charCodeAt(0),
-    semi  : ';'.charCodeAt(0)
+    semi  : ';'.charCodeAt(0),
+    power : '^'.charCodeAt(0),
+    ob    : '('.charCodeAt(0),
+    cb    : ')'.charCodeAt(0)
 },
 WhiteSpace = {
     space   : ' '.charCodeAt(0),
@@ -156,6 +159,15 @@ Lexer.prototype.readOps = function(){
                         break;
         case Ops.semi:
                         token = Token.semi;
+                        break;
+        case Ops.ob  :
+                        token = Token.ob;
+                        break;
+        case Ops.cb  :
+                        token = Token.cb;
+                        break;
+        case Ops.power:
+                        token = Token.power;
                         break;
     }
     this.lexeme = source.slice( this.begin, ++this.forward ).toString( 'utf-8' );

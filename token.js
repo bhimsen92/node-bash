@@ -17,5 +17,8 @@ var Token = {
     plus   : ++counter,
     equal  : ++counter,
     semi   : ++counter,
+    power  : ++counter,
+    ob     : ++counter,
+    cb     : ++counter,
     eof    : ++counter };
 module.exports = Token;
