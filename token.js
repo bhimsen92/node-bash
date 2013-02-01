@@ -20,5 +20,11 @@ var Token = {
     power  : ++counter,
     ob     : ++counter,
     cb     : ++counter,
+    fob    : ++counter,
+    fcb    : ++counter,
+    eq     : ++counter,
+    neq    : ++counter,
+    ge     : ++counter,
+    le     : ++counter,
     eof    : ++counter };
 module.exports = Token;

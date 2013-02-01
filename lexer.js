@@ -20,7 +20,9 @@ Ops = {
     semi  : ';'.charCodeAt(0),
     power : '^'.charCodeAt(0),
     ob    : '('.charCodeAt(0),
-    cb    : ')'.charCodeAt(0)
+    cb    : ')'.charCodeAt(0),
+    fob   : '{'.charCodeAt(0),
+    fcb   : '}'.charCodeAt(0)
 },
 WhiteSpace = {
     space   : ' '.charCodeAt(0),
@@ -138,12 +140,21 @@ Lexer.prototype.readOps = function(){
     switch( source[ this.forward ] ){
         case Ops.equal:
                         token = Token.equal;
+                        if( nextByteIndex < this.length && source[ nextByteIndex ] == Ops.equal ){
+                            token = Token.eq;
+                        }
                         break;
         case Ops.g:
                         token = Token.g;
+                        if( nextByteIndex < this.length && source[ nextByteIndex ] == Ops.equal ){
+                            token = Token.ge;
+                        }
                         break;
         case Ops.l:
                         token = Token.l;
+                        if( nextByteIndex < this.length && source[ nextByteIndex ] == Ops.equal ){
+                            token = Token.le;
+                        }
                         break;
         case Ops.plus:
                         token = Token.plus;
@@ -169,16 +180,24 @@ Lexer.prototype.readOps = function(){
         case Ops.power:
                         token = Token.power;
                         break;
+        case Ops.fob  :
+                        token = Token.fob;
+                        break;
+        case Ops.fcb  :
+                        token = Token.fcb;
+                        break;
     }
     this.lexeme = source.slice( this.begin, ++this.forward ).toString( 'utf-8' );
     return token;
 }
+
 Lexer.prototype.isDigit = function( _char ){
     if( _char >= 48 && _char <= 57 )
         return true;
     else
         return false;
 }
+
 Lexer.prototype.isAlpha = function( _char ){
     var A = 'A'.charCodeAt(0),
         Z = 'Z'.charCodeAt(0),
@@ -190,4 +209,5 @@ Lexer.prototype.isAlpha = function( _char ){
     else
         return false;
 }
+
 module.exports = Lexer;

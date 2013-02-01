@@ -38,6 +38,32 @@ Interpreter.prototype.evaluate = function( node ){
                         return this.evaluate( node.operands[0] ) / this.evaluate( node.operands[1] );
         case Token.power:
                         return Math.pow( this.evaluate( node.operands[0] ), this.evaluate( node.operands[1] ) );
+        case Token.eq:
+                        return this.evaluate( node.operands[0] ) == this.evaluate( node.operands[1] );
+        case Token.and:
+                        return this.evaluate( node.operands[0] ) && this.evaluate( node.operands[1] );
+        case Token.or:
+                        return this.evalute( node.operands[0] ) && this.evaluate( node.operands[1] );
+        case Token.not:
+                        return !this.evaluate( node.operands[0] );
+        case Token.l:
+                        return this.evaluate( node.operands[0] ) < this.evaluate( node.operands[1] );
+        case Token.g:
+                        return this.evaluate( node.operands[0] ) > this.evaluate( node.operands[1] );
+        case Token.ge:
+                        return this.evaluate( node.operands[0] ) >= this.evaluate( node.operands[1] );
+        case Token.le:
+                        return this.evaluate( node.operands[0] ) <= this.evaluate( node.operands[1] );
+        case Token._while:
+                        while( this.evaluate( node.operands[0] ) ){
+                            // evaluate the statement list.
+                            console.log( this.symbolTable );
+                            var stmtList = node.operands[1];
+                            for( var i = 0, len = stmtList.length; i < len; i++ ){
+                                this.evaluate( stmtList[i] );                                
+                            }
+                        }
+                        break;        
     }
 };
 

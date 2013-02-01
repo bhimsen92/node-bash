@@ -27,25 +27,28 @@ Parser.prototype.statementList = function(){
             this.lexer.advance();
         }
         else{
-            // throw error.
+            break;
         }
     }
     return nodelist;
 }
 
 Parser.prototype.statement = function(){
-    var nodeStack = [];
+    var nodeStack = [],
+        n1 = null,
+        n2 = null,
+        opr, nameNode, exprNode;
     while( true ){
         /**
             stmt : VARIABLE '=' expression;
         */
         if( this.lexer.match( Token.ident ) ){
-            var nameNode = new Identifier( this.lexer.lexeme );
+            nameNode = new Identifier( this.lexer.lexeme );
             this.lexer.advance();
             if( this.lexer.match( Token.equal ) ){
-                var opr = Token.equal;
+                opr = Token.equal;
                 this.lexer.advance();
-                var exprNode = this.expression();
+                exprNode = this.expression();
                 nodeStack.push( new Operator( opr, nameNode, exprNode ) );
             }
             else{
@@ -53,6 +56,28 @@ Parser.prototype.statement = function(){
                 nodeStack.push( nameNode );
                 // === epsilon transition cfg.
                 break;
+            }
+        }
+        /**
+            stmt : WHILE '(' boolean ')' '{' stmt_list '}';
+        */
+        else if( this.lexer.match( Token._while ) ){
+            opr = Token._while;
+            this.lexer.advance();
+            if( this.lexer.match( Token.ob ) ){
+                this.lexer.advance();
+                n1 = this.boolean();
+                if( this.lexer.match( Token.cb ) ){
+                    this.lexer.advance();
+                    if( this.lexer.match( Token.fob ) ){
+                        this.lexer.advance();
+                        n2 = this.statementList();
+                        if( this.lexer.match( Token.fcb ) ){
+                            this.lexer.advance();
+                            nodeStack.push( new Operator( opr, n1, n2 ) );
+                        }
+                    }
+                }
             }
         }
         else{
@@ -207,10 +232,124 @@ Parser.prototype.factor = function(){
     }
     return node;
 }
+
+/**
+    Grammer took from Dragaon book.
+*/
+Parser.prototype.boolean = function(){
+    var nodeStack = [],
+        n1 = null,
+        n2 = null, opr;
+    if( this.lexer.match( Token.not ) ){
+        opr = Token.not;
+        this.lexer.advance();
+        n1 = this.join();
+        nodeStack.push( new Operator( opr, n1 ) );
+    }
+    else{
+        n1 = this.join();
+        while( true ){
+            if( this.lexer.match( Token.or ) ){
+                opr = Token.or;
+            }
+            else{
+                break;
+            }
+            this.lexer.advance();
+            n2 = this.join();
+            if( nodeStack.length > 0 ){
+                n1 = nodeStack.pop();
+            }
+            nodeStack.push( new Operator( opr, n1, n2 ) );
+        }
+    }
+    if( nodeStack.length > 0 ){
+        return nodeStack.pop();
+    }
+    else{
+        return n1;
+    }
+}
+
+Parser.prototype.join = function(){
+    var nodeStack = [],
+        n1 = null,
+        n2 = null, opr;
+    n1 = this.equality();
+    while( true ){
+        if( this.lexer.match( Token.and ) ){
+            opr = Token.and;
+        }
+        else{
+            break;
+        }
+        this.lexer.advance();
+        n2 = this.equality();
+        if( nodeStack.length > 0 ){
+            n1 = nodeStack.pop();
+        }
+        nodeStack.push( new Operator( opr, n1, n2 ) );
+    }
+    if( nodeStack.length > 0 ){
+        return nodeStack.pop();
+    }
+    else{
+        return n1;
+    }
+}
+
+Parser.prototype.equality = function(){
+    var nodeStack = [],
+        n1 = null,
+        n2 = null, opr;
+    n1 = this.relation();
+    while( true ){
+        if( this.lexer.match( Token.eq ) ){
+            opr = Token.eq;
+        }
+        else if( this.lexer.match( Token.neq ) ){
+            opr = Token.neq;
+        }
+        else{
+            break;
+        }
+        this.lexer.advance();
+        n2 = this.relation();
+        if( nodeStack.length > 0 ){
+            n1 = nodeStack.pop();
+        }
+        nodeStack.push( new Operator( opr, n1, n2 ) );
+    }
+    if( nodeStack.length > 0 ){
+        return nodeStack.pop();
+    }
+    else{
+        return n1;
+    }
+}
+
+Parser.prototype.relation = function(){
+    var nodeStack = [],
+        n1 = null,
+        n2 = null, opr;
+    n1 = this.expression();
+    if( this.lexer.match( Token.l ) ){
+        opr = Token.l;        
+    }
+    else if( this.lexer.match( Token.g ) ){
+        opr = Token.g;
+    }
+    else if( this.lexer.match( Token.le ) ){
+        opr = Token.le;
+    }
+    else if( this.lexer.match( Token.ge ) ){
+        opr = Token.ge;
+    }
+    this.lexer.advance();
+    console.log( "op: " + this.lexer.lexeme );    
+    n2 = this.expression();
+    
+    return new Operator( opr, n1, n2 );
+}
+
 module.exports = Parser;
-/*
-var parser = new Parser( "test.js" );
-parser.lexer.on( "loaded", function(){
-    parser.parse();
-    console.log( parser.interpreter.symbolTable );
-});*/
