@@ -22,7 +22,11 @@ Ops = {
     ob    : '('.charCodeAt(0),
     cb    : ')'.charCodeAt(0),
     fob   : '{'.charCodeAt(0),
-    fcb   : '}'.charCodeAt(0)
+    fcb   : '}'.charCodeAt(0),
+    dquote : '"'.charCodeAt(0),
+    quote : "'".charCodeAt(0),
+    complement: '!'.charCodeAt(0),
+    comma: ",".charCodeAt(0)
 },
 WhiteSpace = {
     space   : ' '.charCodeAt(0),
@@ -97,6 +101,9 @@ Lexer.prototype.lex = function(){
             else if( this.isAlpha( this.source[ this.forward ] ) ){
                 return this.readIdentifier();
             }
+            else if( this.source[ this.forward ] == Ops.dquote ){
+                return this.readString( true );
+            }
             else{
                 return this.readOps();
             }
@@ -104,6 +111,28 @@ Lexer.prototype.lex = function(){
     }
     return Token.eof;
 }
+
+Lexer.prototype.readString = function( withDQuotes ){
+    var delim = Ops.dquote;
+    if( !withDQuotes ){
+        delim = Ops.quote;
+    }
+    // read quote.
+    this.begin = ++this.forward;
+    while( this.forward < this.length && this.source[ this.forward ] != delim ){
+        this.forward++;
+    }
+    this.lexeme = this.source.slice( this.begin, this.forward ).toString( 'utf-8' );
+    // read quote
+    this.forward++;
+    if( this.lexem == '' ){
+        return Token.eof;
+    }
+    else{
+        return Token.string;
+    }
+}
+
 Lexer.prototype.readNumber = function(){
     var source = this.source,
         dot = '.'.charCodeAt(0);
@@ -141,18 +170,21 @@ Lexer.prototype.readOps = function(){
         case Ops.equal:
                         token = Token.equal;
                         if( nextByteIndex < this.length && source[ nextByteIndex ] == Ops.equal ){
+                            this.forward++;
                             token = Token.eq;
                         }
                         break;
         case Ops.g:
                         token = Token.g;
                         if( nextByteIndex < this.length && source[ nextByteIndex ] == Ops.equal ){
+                            this.forward++;
                             token = Token.ge;
                         }
                         break;
         case Ops.l:
                         token = Token.l;
                         if( nextByteIndex < this.length && source[ nextByteIndex ] == Ops.equal ){
+                            this.forward++;
                             token = Token.le;
                         }
                         break;
@@ -171,20 +203,29 @@ Lexer.prototype.readOps = function(){
         case Ops.semi:
                         token = Token.semi;
                         break;
-        case Ops.ob  :
+        case Ops.ob:
                         token = Token.ob;
                         break;
-        case Ops.cb  :
+        case Ops.cb:
                         token = Token.cb;
                         break;
         case Ops.power:
                         token = Token.power;
                         break;
-        case Ops.fob  :
+        case Ops.fob:
                         token = Token.fob;
                         break;
-        case Ops.fcb  :
+        case Ops.fcb:
                         token = Token.fcb;
+                        break;
+        case Ops.complement:
+                        if( nextByteIndex < this.length && source[ nextByteIndex ] == Ops.equal ){
+                            this.forward++;
+                            token = Token.neq;
+                        }
+                        break;
+        case Ops.comma:
+                        token = Token.comma;
                         break;
     }
     this.lexeme = source.slice( this.begin, ++this.forward ).toString( 'utf-8' );
@@ -210,4 +251,30 @@ Lexer.prototype.isAlpha = function( _char ){
         return false;
 }
 
+Lexer.prototype.peek = function( token ){
+    // save the state of the lexer.
+    var initialBegin = this.begin,
+        initialForward = this.forward,
+        initialLexeme = this.lexeme,
+        initialLookAhead = this.lookAhead;
+        rval = false;
+    this.advance();
+    if( this.match( token ) ){
+        rval = true;
+    }
+    this.begin = initialBegin;
+    this.forward = initialForward;
+    this.lexeme = initialLexeme;
+    this.lookAhead = initialLookAhead;
+    return rval;
+}
+
+Lexer.prototype.exists = function(){
+    for( var i = 0, len = arguments.length; i < len; i++ ){
+        if( this.peek( arguments[i] ) ){
+            return true;   
+        }
+    }
+    return false;
+}
 module.exports = Lexer;

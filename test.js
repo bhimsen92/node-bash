@@ -1,4 +1,5 @@
-i = 0;
-while( i < 10 ){
-    i = i + 1;
-};
+a = 0;
+while( a != 10 ){
+    a = a + 1;
+    print(a);
+}

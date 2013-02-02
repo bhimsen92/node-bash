@@ -2,7 +2,8 @@ var Lexer = require( "./lexer" ),
     Token = require( "./token" ),
     Identifier = require( "./nodes" ).Identifier,
     _Number = require( "./nodes" )._Number,
-    Operator = require( "./nodes" ).Operator;
+    Operator = require( "./nodes" ).Operator,
+    _String = require( "./nodes" )._String;
     
 function Parser( file ){
     this.lexer = new Lexer( file, true );
@@ -17,18 +18,26 @@ Parser.prototype.program = function(){
 };
 
 Parser.prototype.statementList = function(){
-    var nodelist = [];
+    var nodelist = [],
+        node;
     while( true ){
-        if( this.lexer.match( Token.eof ) ){
+        node = this.statement();
+        if( node != null ){
+            nodelist.push( node );
+        }
+        else{
+            // no statements to read, the end of statments.
             break;
         }
-        nodelist.push( this.statement() );
+        if( this.lexer.match( Token.eof ) ){
+            break;
+        }/*
         if( this.lexer.match( Token.semi ) ){
             this.lexer.advance();
         }
         else{
             break;
-        }
+        }*/
     }
     return nodelist;
 }
@@ -37,19 +46,28 @@ Parser.prototype.statement = function(){
     var nodeStack = [],
         n1 = null,
         n2 = null,
+        n3 = null,
+        n4 = null,
         opr, nameNode, exprNode;
     while( true ){
         /**
             stmt : VARIABLE '=' expression;
         */
-        if( this.lexer.match( Token.ident ) ){
+        if( this.lexer.match( Token.ident ) && !this.lexer.peek( Token.ob ) ){
             nameNode = new Identifier( this.lexer.lexeme );
             this.lexer.advance();
             if( this.lexer.match( Token.equal ) ){
                 opr = Token.equal;
                 this.lexer.advance();
                 exprNode = this.expression();
-                nodeStack.push( new Operator( opr, nameNode, exprNode ) );
+                if( this.lexer.match( Token.semi ) ){
+                    this.lexer.advance();
+                    nodeStack.push( new Operator( opr, nameNode, exprNode ) );
+                    break;
+                }
+                else{
+                    console.warn( "missing ';' character" );
+                }
             }
             else{
                 // valid ==> a;
@@ -75,13 +93,63 @@ Parser.prototype.statement = function(){
                         if( this.lexer.match( Token.fcb ) ){
                             this.lexer.advance();
                             nodeStack.push( new Operator( opr, n1, n2 ) );
+                            break;
                         }
                     }
                 }
             }
         }
+        /**
+            stmt : IF '(' boolean ')' '{' stmt_list '}'
+                 | IF '(' boolean ')' '{' stmt_list '}' else '{' stmt_list '}'
+        */
+        else if( this.lexer.match( Token._if ) ){
+            opr = Token._if;
+            this.lexer.advance();
+            if( this.lexer.match( Token.ob ) ){
+                this.lexer.advance();
+                n1 = this.boolean();
+                if( this.lexer.match( Token.cb ) ){
+                    this.lexer.advance();
+                    if( this.lexer.match( Token.fob ) ){
+                        this.lexer.advance();
+                        n2 = this.statementList();
+                        if( this.lexer.match( Token.fcb ) ){
+                            this.lexer.advance();
+                            if( this.lexer.match( Token._else ) ){
+                                this.lexer.advance();
+                                if( this.lexer.match( Token.fob ) ){
+                                    this.lexer.advance();
+                                    n3 = this.statementList();
+                                    if( this.lexer.match( Token.fcb ) ){
+                                        this.lexer.advance();
+                                        nodeStack.push( new Operator( opr, n1, n2, n3 ) );
+                                        break;
+                                    }
+                                }
+                            }
+                            else{
+                                nodeStack.push( new Operator( opr, n1, n2 ) );
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        /**
+            stmt : expression;
+        */
         else{
-            // === epsilon transition cfg.
+            if( this.lexer.exists( Token.number, Token.string, Token.ident, Token.ob ) ){
+                nodeStack.push( this.expression() );
+                if( this.lexer.match( Token.semi ) ){
+                    this.lexer.advance();
+                }
+                else{
+                    console.warn( "missing ';' at the end of the expression" );
+                }
+            }
             break;
         }
     }
@@ -168,15 +236,15 @@ Parser.prototype.term = function(){
 }
 
 /**
-    power  : factor power'
-    power' : ^ factor power'
+    power  : unary power'
+    power' : ^ unary power'
            | epsilon
 */
 Parser.prototype.power = function(){
     var nodeStack = [],
         n1 = null,
         n2 = null, opr;
-    n1 = this.factor();
+    n1 = this.unary();
     while( true ){
         if( this.lexer.match( Token.power ) ){
             opr = Token.power;
@@ -186,7 +254,7 @@ Parser.prototype.power = function(){
             break;
         }
         this.lexer.advance();
-        n2 = this.factor();
+        n2 = this.unary();
         if( nodeStack.length > 0 ){
             n1 = nodeStack.pop();
         }
@@ -201,28 +269,78 @@ Parser.prototype.power = function(){
 }
 
 /**
+    unary: not unary
+          | - unary
+          | factor    
+*/
+Parser.prototype.unary = function(){
+    var oprStack = [],
+        node = null,
+        opr;
+    while( true ){
+        if( this.lexer.match( Token.not ) ){
+            oprStack.push( Token.not );
+            this.lexer.advance();
+        }
+        else if( this.lexer.match( Token.minus ) ){
+            oprStack.push( Token.uminus );
+            this.lexer.advance();
+        }
+        else{
+            node = this.factor();
+            break;
+        }
+    }
+    if( oprStack.length > 0 ){
+        while( oprStack.length > 0 ){
+            opr = oprStack.pop();
+            node = new Operator( opr, node );
+        }
+    }
+    return node;
+}
+
+/**
     factor: number
+          | string
           | identifier
-          | ( expression )
+          | identifier( args_list ) !! function call.
+          | ( boolean )
 */
 Parser.prototype.factor = function(){
-    var node = null;
+    var node = null,
+        argsList = null;
     if( this.lexer.match( Token.number ) ){
         node = new _Number( this.lexer.lexeme );
+        this.lexer.advance();
+    }
+    else if( this.lexer.match( Token.string ) ){
+        node = new _String( this.lexer.lexeme );
         this.lexer.advance();
     }
     else if( this.lexer.match( Token.ident ) ){
         node = new Identifier( this.lexer.lexeme );
         this.lexer.advance();
+        if( this.lexer.match( Token.ob ) ){
+            this.lexer.advance();
+            argsList = this.argsList();
+            if( this.lexer.match( Token.cb ) ){
+                this.lexer.advance();
+                node = new Operator( Token.funct_call, node, argsList );
+            }
+            else{
+                console.warn( "function_call, missing ')' character" );
+            }
+        }
     }
     else if( this.lexer.match( Token.ob ) ){
         this.lexer.advance();
-        node = this.expression();
+        node = this.boolean();
         if( this.lexer.match( Token.cb ) ){
             this.lexer.advance();
         }
         else{
-            console.warn( "missing '(' symbol" );
+            console.warn( "missing ')' symbol" );
             // throw error.
         }
     }
@@ -234,34 +352,46 @@ Parser.prototype.factor = function(){
 }
 
 /**
+    argslist  : expr argslist'
+    argslist' : , expr argslist'
+*/
+Parser.prototype.argsList = function(){
+    // i got no better name for this.
+    var argslist = [];
+    
+    argslist.push( this.expression() );
+    while( true ){
+        if( this.lexer.match( Token.comma ) ){
+            this.lexer.advance();
+            argslist.push( this.expression() );
+        }
+        else{
+            break;
+        }
+    }
+    return argslist;
+}
+/**
     Grammer took from Dragaon book.
 */
 Parser.prototype.boolean = function(){
     var nodeStack = [],
         n1 = null,
         n2 = null, opr;
-    if( this.lexer.match( Token.not ) ){
-        opr = Token.not;
-        this.lexer.advance();
-        n1 = this.join();
-        nodeStack.push( new Operator( opr, n1 ) );
-    }
-    else{
-        n1 = this.join();
-        while( true ){
-            if( this.lexer.match( Token.or ) ){
-                opr = Token.or;
-            }
-            else{
-                break;
-            }
-            this.lexer.advance();
-            n2 = this.join();
-            if( nodeStack.length > 0 ){
-                n1 = nodeStack.pop();
-            }
-            nodeStack.push( new Operator( opr, n1, n2 ) );
+    n1 = this.join();
+    while( true ){
+        if( this.lexer.match( Token.or ) ){
+            opr = Token.or;
         }
+        else{
+            break;
+        }
+        this.lexer.advance();
+        n2 = this.join();
+        if( nodeStack.length > 0 ){
+            n1 = nodeStack.pop();
+        }
+        nodeStack.push( new Operator( opr, n1, n2 ) );
     }
     if( nodeStack.length > 0 ){
         return nodeStack.pop();
@@ -301,7 +431,7 @@ Parser.prototype.join = function(){
 Parser.prototype.equality = function(){
     var nodeStack = [],
         n1 = null,
-        n2 = null, opr;
+        n2 = null, opr;    
     n1 = this.relation();
     while( true ){
         if( this.lexer.match( Token.eq ) ){
@@ -345,10 +475,11 @@ Parser.prototype.relation = function(){
     else if( this.lexer.match( Token.ge ) ){
         opr = Token.ge;
     }
+    else{
+        return n1;
+    }
     this.lexer.advance();
-    console.log( "op: " + this.lexer.lexeme );    
     n2 = this.expression();
-    
     return new Operator( opr, n1, n2 );
 }
 

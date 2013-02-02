@@ -26,5 +26,9 @@ var Token = {
     neq    : ++counter,
     ge     : ++counter,
     le     : ++counter,
+    uminus : ++counter,
+    string : ++counter,
+    funct_call: ++counter,
+    comma : ++counter,
     eof    : ++counter };
 module.exports = Token;

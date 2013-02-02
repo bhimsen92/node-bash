@@ -9,9 +9,18 @@ function Identifier( name ){
     this.name = name;
 }
 
+Identifier.prototype.getName = function(){
+    return this.name;
+}
+
 function _Number( value ){
     Node.call( this, Token.number );
     this.value = parseFloat( value );
+}
+
+function _String( value ){
+    Node.call( this, Token.string );
+    this.value = new String( value );
 }
 
 function Operator( op ){
@@ -25,5 +34,6 @@ function Operator( op ){
 module.exports = {
                     "Identifier" : Identifier,
                     "_Number"    :  _Number,
-                    "Operator"   : Operator
+                    "Operator"   : Operator,
+                    "_String"    : _String
                  };
