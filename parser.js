@@ -3,7 +3,8 @@ var Lexer = require( "./lexer" ),
     Identifier = require( "./nodes" ).Identifier,
     _Number = require( "./nodes" )._Number,
     Operator = require( "./nodes" ).Operator,
-    _String = require( "./nodes" )._String;
+    _String = require( "./nodes" )._String,
+    util = require( "util" );
     
 function Parser( file ){
     this.lexer = new Lexer( file, true );
@@ -21,8 +22,9 @@ Parser.prototype.statementList = function(){
     var nodelist = [],
         node;
     while( true ){
+        //console.log( "statements" );
         node = this.statement();
-        if( node != null ){
+        if( node != null && node != undefined ){
             nodelist.push( node );
         }
         else{
@@ -91,7 +93,7 @@ Parser.prototype.statement = function(){
                         this.lexer.advance();
                         n2 = this.statementList();
                         if( this.lexer.match( Token.fcb ) ){
-                            this.lexer.advance();
+                            this.lexer.advance();                            
                             nodeStack.push( new Operator( opr, n1, n2 ) );
                             break;
                         }
@@ -138,10 +140,59 @@ Parser.prototype.statement = function(){
             }
         }
         /**
+            stmt: funct name '(' args_list ')' '{' stmt_list '}'
+        */
+        else if( this.lexer.match( Token.funct ) ){
+            opr = Token.funct;
+            this.lexer.advance();
+            if( this.lexer.match( Token.ident ) ){
+                n1 = new Identifier( this.lexer.lexeme );
+                this.lexer.advance();
+                if( this.lexer.match( Token.ob ) ){
+                    this.lexer.advance();
+                    n2 = this.functionParameterList();
+                    if( this.lexer.match( Token.cb ) ){
+                        this.lexer.advance();
+                        if( this.lexer.match( Token.fob ) ){
+                            this.lexer.advance();
+                            //console.log( "in_funct def" );
+                            n3 = this.statementList();
+                            //console.log( "out_funct def" );
+                            if( this.lexer.match( Token.fcb ) ){
+                                this.lexer.advance();
+                                //console.log( "seen }" );
+                                nodeStack.push( new Operator( opr, n1, n2, n3 ) );
+                                break;
+                            }
+                            else{
+                                console.warn( "missing '}' in function definition: " + n1.getName() );
+                            }
+                        }
+                        else{
+                            console.warn( "missing '{' in function definition: " + n1.getName() );
+                        }
+                    }
+                    else{
+                        console.warn( "missing ')' in function definition: " + n1.getName() );
+                    }
+                }
+                else{
+                    console.warn( "missing '(' in function definition:" + n1.getName() );
+                }
+            }
+            else{
+                console.warn( "function name must be an identfier." );
+            }
+        }
+        /**
             stmt : expression;
         */
         else{
-            if( this.lexer.exists( Token.number, Token.string, Token.ident, Token.ob ) ){
+            /**
+                !this.lexer.match( Token.fcb ) hack to stop from reading past '{' while parsing while and if else conditions.
+            */
+            if( this.lexer.exists( Token.number, Token.string, Token.ident, Token.ob ) && !this.lexer.match( Token.fcb ) ){
+                //console.log( "lexeme: " + this.lexer.lexeme );
                 nodeStack.push( this.expression() );
                 if( this.lexer.match( Token.semi ) ){
                     this.lexer.advance();
@@ -319,11 +370,13 @@ Parser.prototype.factor = function(){
         this.lexer.advance();
     }
     else if( this.lexer.match( Token.ident ) ){
+        //console.log( "in_factor: " + this.lexer.lexeme );
         node = new Identifier( this.lexer.lexeme );
         this.lexer.advance();
         if( this.lexer.match( Token.ob ) ){
             this.lexer.advance();
             argsList = this.argsList();
+            //console.log( "good in factor" );
             if( this.lexer.match( Token.cb ) ){
                 this.lexer.advance();
                 node = new Operator( Token.funct_call, node, argsList );
@@ -358,19 +411,53 @@ Parser.prototype.factor = function(){
 Parser.prototype.argsList = function(){
     // i got no better name for this.
     var argslist = [];
-    
-    argslist.push( this.expression() );
-    while( true ){
-        if( this.lexer.match( Token.comma ) ){
-            this.lexer.advance();
-            argslist.push( this.expression() );
-        }
-        else{
-            break;
+    // !this.lexer.match( Token.cb ) hack is for parsing empty args list. eg: helloWorld()
+    if( !this.lexer.match( Token.cb ) ){
+        argslist.push( this.expression() );
+        while( true ){
+            if( this.lexer.match( Token.comma ) ){
+                this.lexer.advance();
+                argslist.push( this.expression() );
+            }
+            else{
+                break;
+            }
         }
     }
     return argslist;
 }
+
+/**
+    funct_parameter : ident funct_parameter'
+    funct_parameter : , ident funct_parameter'
+*/
+Parser.prototype.functionParameterList = function(){
+    var paralist = [];
+    if( this.lexer.match( Token.ident ) ){
+        paralist.push( new Identifier( this.lexer.lexeme ) );
+        this.lexer.advance();
+        while( true ){
+            if( this.lexer.match( Token.comma ) ){
+                this.lexer.advance();
+                if( this.lexer.match( Token.ident ) ){
+                    paralist.push( new Identifier( this.lexer.lexeme ) );
+                    this.lexer.advance();
+                }
+                else{
+                    console.warn( "function parameter: identifier is required." );
+                }
+            }
+            else{
+                break;
+            }
+        }
+    }
+    else if( !this.lexer.match( Token.cb ) ){
+        console.warn( "parameter must be an identifier" );
+    }
+    return paralist;
+}
+
 /**
     Grammer took from Dragaon book.
 */

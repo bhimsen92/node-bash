@@ -7,7 +7,8 @@ var Keywords = {
     "for"   : Token._for,
     "while" : Token._while,
     "if"    : Token._if,
-    "else"  : Token._else
+    "else"  : Token._else,
+    "funct" : Token.funct
 },
 Ops = {
     equal : '='.charCodeAt(0),

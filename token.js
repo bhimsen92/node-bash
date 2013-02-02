@@ -30,5 +30,7 @@ var Token = {
     string : ++counter,
     funct_call: ++counter,
     comma : ++counter,
-    eof    : ++counter };
+    eof    : ++counter,
+    funct  : ++counter 
+};
 module.exports = Token;
