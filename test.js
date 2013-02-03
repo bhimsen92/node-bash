@@ -15,4 +15,8 @@ funct fibo( n ){
     return c;
 }
 
-print( "fibo of 8: " + fibo( 8 ) );
+funct helperFun( n ){
+    return fibo( n );
+}
+
+print( "fibo of 8: " + helperFun( 8 ) );
