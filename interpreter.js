@@ -91,7 +91,10 @@ Interpreter.prototype.evaluate = function( node, context ){
                                     };
                                 }
                                 else{
-                                    return this.evaluate( stmtList[i], context );
+                                    var value = this.evaluate( stmtList[i], context );
+                                    if( typeof value == 'object' && value.token == 'return' ){
+                                        return value;
+                                    }
                                 }
                             }
                         }
@@ -108,17 +111,17 @@ Interpreter.prototype.evaluate = function( node, context ){
                                     };
                                 }
                                 else{
-                                    return this.evaluate( ifStmtList[i], context );
-                                    /*if( typeof value == 'object' && value.token == 'return' ){
+                                    var value = this.evaluate( ifStmtList[i], context );
+                                    if( typeof value == 'object' && value.token == 'return' ){
                                         return value;
-                                    }*/
+                                    }
                                 }
                             }
                        }
                        else if( node.operands.length == 3 ){
                             var elseStmtList = op3;
                             for( var i = 0, len = elseStmtList.length; i < len; i++ ){
-                                // code getting repeated, i need to rethink.
+                                // code getting repeated, i need to rethink but not today.
                                 if( elseStmtList[i].type == Token._return ){
                                     var value = this.evaluate( elseStmtList[i], context );
                                     return {
@@ -127,7 +130,10 @@ Interpreter.prototype.evaluate = function( node, context ){
                                     };
                                 }
                                 else{
-                                    return this.evaluate( elseStmtList[i], context );
+                                    var value = this.evaluate( elseStmtList[i], context );
+                                    if( typeof value == 'object' && value.token == 'return' ){
+                                        return value;
+                                    }
                                 }
                             }
                        }

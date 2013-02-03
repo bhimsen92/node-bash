@@ -208,7 +208,7 @@ Parser.prototype.statement = function(){
             /**
                 !this.lexer.match( Token.fcb ) hack to stop from reading past '{' while parsing while and if else conditions.
             */
-            if( this.lexer.exists( Token.number, Token.string, Token.ident, Token.ob ) && !this.lexer.match( Token.fcb ) && !this.lexer.match( Token._return ) ){
+            if( this.lexer.exists( Token.number, Token.string, Token.ident, Token.ob ) && !this.lexer.match( Token.fcb ) ){
                 //console.log( "lexeme: " + this.lexer.lexeme );
                 nodeStack.push( this.expression() );
                 if( this.lexer.match( Token.semi ) ){
