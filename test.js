@@ -1,10 +1,13 @@
-funct helloWorld( a ){
-    print(a);
-    while( a != 10 ){
-        a = a + 1;
-        print(a);
+funct fibo( n ){
+    if( n == 0 ){
+        return 0;
+    }
+    if( n == 1 ){
+        return 1;
+    }
+    else{
+        return fibo( n - 1 ) + fibo( n - 2 );
     }
 }
-a = 100;
-helloWorld( 4 );
-print( "outside: " + a );
+
+print( fibo(8) );

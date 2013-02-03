@@ -24,7 +24,7 @@ Parser.prototype.statementList = function(){
     while( true ){
         //console.log( "statements" );
         node = this.statement();
-        if( node != null && node != undefined ){
+        if( node != null && typeof node != 'undefined' ){
             nodelist.push( node );
         }
         else{
@@ -140,7 +140,7 @@ Parser.prototype.statement = function(){
             }
         }
         /**
-            stmt: funct name '(' args_list ')' '{' stmt_list '}'
+            stmt: funct name '(' args_list ')' '{' stmt_list '}' !! with optional return statement.
         */
         else if( this.lexer.match( Token.funct ) ){
             opr = Token.funct;
@@ -161,7 +161,7 @@ Parser.prototype.statement = function(){
                             if( this.lexer.match( Token.fcb ) ){
                                 this.lexer.advance();
                                 //console.log( "seen }" );
-                                nodeStack.push( new Operator( opr, n1, n2, n3 ) );
+                                nodeStack.push( new Operator( opr, n1, n2, n3, n4 ) );
                                 break;
                             }
                             else{
@@ -185,13 +185,30 @@ Parser.prototype.statement = function(){
             }
         }
         /**
+            stmt : return expression;
+        */
+        else if( this.lexer.match( Token._return ) ){
+            opr = Token._return;
+            this.lexer.advance();
+            n1 = this.expression();
+            // check semi.
+            if( this.lexer.match( Token.semi ) ){
+                this.lexer.advance();
+                nodeStack.push( new Operator( opr, n1 ) );
+                break;
+            }
+            else{
+                console.warn( "missing ';' at the end of return statement" );
+            }
+        }
+        /**
             stmt : expression;
         */
         else{
             /**
                 !this.lexer.match( Token.fcb ) hack to stop from reading past '{' while parsing while and if else conditions.
             */
-            if( this.lexer.exists( Token.number, Token.string, Token.ident, Token.ob ) && !this.lexer.match( Token.fcb ) ){
+            if( this.lexer.exists( Token.number, Token.string, Token.ident, Token.ob ) && !this.lexer.match( Token.fcb ) && !this.lexer.match( Token._return ) ){
                 //console.log( "lexeme: " + this.lexer.lexeme );
                 nodeStack.push( this.expression() );
                 if( this.lexer.match( Token.semi ) ){

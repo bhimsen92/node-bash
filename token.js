@@ -31,6 +31,7 @@ var Token = {
     funct_call: ++counter,
     comma : ++counter,
     eof    : ++counter,
-    funct  : ++counter 
+    funct  : ++counter,
+    _return : ++counter
 };
 module.exports = Token;

@@ -16,18 +16,25 @@ Interpreter.prototype.evaluate = function( node, context ){
     // typeof node !== 'undefined' && typeof node.operands !== 'undefined'
     // the above hack is introduced as i was using op1, op2, op3 vars for simplicity but some times node will not have
     // operands attribute as in Token.ident, Token.string, Token.number.    
-    if( typeof node !== 'undefined' && typeof node.operands !== 'undefined' ){
+    if( ( typeof node !== 'undefined' && node != null ) && typeof node.operands !== 'undefined' ){
         var op1 = node.operands[0],
             op2 = node.operands[1],
-            op3 = node.operands[2];
+            op3 = node.operands[2],
+            op4 = node.operands[3];
     }
     switch( node.type ){
         case Token.ident:
                     if( this.hasAttribute( context.getHash(), node.name ) ){
                         return context.get( node.name );
-                    }
+                    }                    
                     else{
-                        throw Error( "Undefined symbol: " + node.name );
+                        var result = this.resolve( node.name, context );
+                        if( result == null ){
+                            throw Error( "Undefined symbol: " + node.name );
+                        }
+                        else{
+                            return result;
+                        }
                     }
                     break;
         case Token.number:
@@ -76,23 +83,54 @@ Interpreter.prototype.evaluate = function( node, context ){
                             // evaluate the statement list.
                             var stmtList = op2;
                             for( var i = 0, len = stmtList.length; i < len; i++ ){
-                                this.evaluate( stmtList[i], context );
+                                if( stmtList[i].type == Token._return ){
+                                    var value = this.evaluate( stmtList[i], context );
+                                    return {
+                                        "token" : "return",
+                                        "rvalue" : value
+                                    };
+                                }
+                                else{
+                                    return this.evaluate( stmtList[i], context );
+                                }
                             }
                         }
                         break;
-        case Token._if:             
+        case Token._if:
                        if( this.evaluate( op1, context ) ){
                             var ifStmtList = op2;
                             for( var i = 0, len = ifStmtList.length; i < len; i++ ){
-                                this.evaluate( ifStmtList[i], context );
+                                if( ifStmtList[i].type == Token._return ){
+                                    var value = this.evaluate( ifStmtList[i], context );
+                                    return {
+                                        "token" : "return",
+                                        "rvalue" : value
+                                    };
+                                }
+                                else{
+                                    return this.evaluate( ifStmtList[i], context );
+                                    /*if( typeof value == 'object' && value.token == 'return' ){
+                                        return value;
+                                    }*/
+                                }
                             }
                        }
                        else if( node.operands.length == 3 ){
                             var elseStmtList = op3;
                             for( var i = 0, len = elseStmtList.length; i < len; i++ ){
-                                this.evaluate( elseStmtList[i], context );
+                                // code getting repeated, i need to rethink.
+                                if( elseStmtList[i].type == Token._return ){
+                                    var value = this.evaluate( elseStmtList[i], context );
+                                    return {
+                                        "token" : "return",
+                                        "rvalue" : value
+                                    };
+                                }
+                                else{
+                                    return this.evaluate( elseStmtList[i], context );
+                                }
                             }
-                       }  
+                       }
                        break;
         case Token.funct_call:
                         if( op1.constructor == Identifier ){
@@ -114,8 +152,18 @@ Interpreter.prototype.evaluate = function( node, context ){
                         break;
         case Token.funct:
                         var functName = op1.getName();
-                        context.addFunct( functName, new UserDefinedFunction( op2, op3 ) );
+                        context.addFunct( functName, new UserDefinedFunction( op2, op3, op4 ) );
                         break;
+        case Token._return:
+                        // check whether return statement is executed in proper statement.
+                        if( context.tokenExist( "funct" ) ){
+                            var rval = this.evaluate( op1, context );
+                            return rval;
+                        }
+                        else{
+                            console.warn( "invalid return statement, it can only occur in functions." );
+                            throw Error( "return error" );
+                        }
     }
 };
 
@@ -137,11 +185,12 @@ Interpreter.prototype.execute = function(){
 
 Interpreter.prototype.evaluateUserDefinedFunction = function( functName, argsList, context ){
     var newContext = new Context(),
-        funct;
+        funct, rval = '';
     // get the function.
-    funct = context.getFunct( functName );       
+    funct = context.getFunct( functName );
     // push the current context.
     newContext.addContext( context );
+    newContext.setToken( "funct" );
     // evaluate argsList nodes.
     for( var i = 0, len = argsList.length; i < len; i++ ){
         newContext.put( funct.args[i].getName(), this.evaluate( argsList[i], context ) );
@@ -151,10 +200,23 @@ Interpreter.prototype.evaluateUserDefinedFunction = function( functName, argsLis
         newContext.put( funct.args[i].getName(), undefined );
     }
     for( i = 0, len = funct.stmtList.length; i < len; i++ ){
-        if( typeof funct.stmtList[i] !== 'undefined' ){
-            this.evaluate( funct.stmtList[i], newContext );
+        if( typeof funct.stmtList[i] !== 'undefined' && funct.stmtList[i] != null ){
+        if( funct.stmtList[i].type == Token._return ){
+            var rval = this.evaluate( funct.stmtList[i], newContext );
+            break;
+        }
+        else{
+            var stmtRValue = this.evaluate( funct.stmtList[i], newContext );
+            if( stmtRValue != null && typeof stmtRValue == 'object' && stmtRValue.token == 'return' ){
+                // destroy current context before returning.
+                rval = stmtRValue.rvalue;
+                break;
+            }
+        }
         }
     }
+    newContext.destroy();
+    return rval;
 }
 
 Interpreter.prototype.evaluateBuiltInFunction = function( functName, argsList, context ){
@@ -170,7 +232,36 @@ Interpreter.prototype.isBuiltInFunction = function( functName ){
 }
 
 Interpreter.prototype.isUserDefined = function( functName, context ){
-    return this.hasAttribute( context.getFunctHash(), functName );
+    if( this.hasAttribute( context.getFunctHash(), functName ) ){
+        return true;
+    }
+    else{
+        return this.resolveFunctName( functName, context );
+    }
+}
+
+Interpreter.prototype.resolve = function( varName, context ){
+    var currContext = context.getPLink();
+    while( currContext != null ){
+        if( this.hasAttribute( varName, currContext.getHash() ) ){
+            return currContext.get( varName );
+        }
+        else{
+            currContext = currContext.getPLink();
+        }
+    }
+    return null;
+}
+
+Interpreter.prototype.resolveFunctName = function( functName, context ){
+    var currContext = context.getPLink();
+    while( currContext != null ){
+        if( this.hasAttribute( currContext.getFunctHash(), functName ) )
+            return true;
+        else
+            currContext = currContext.getPLink();
+    }
+    return false;
 }
 
 var interp = new Interpreter( "test.js" );
