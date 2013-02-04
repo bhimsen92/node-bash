@@ -1,22 +1,21 @@
+message = "Hello world";
+
+funct main(){
+    print( message );
+}
+
 funct fibo( n ){
-    a = 0;
-    b = 1;
-    c = 0;
-    i = 2;
-    while( i <= n ){
-        c = a + b;
-        if( i == 5 ){
-            return c;
-        }
-        a = b;
-        b = c;
-        i = i + 1;
+    if( n == 0 ){
+        return 0;
     }
-    return c;
+    if( n == 1 ){
+        return 1;
+    }
+    else{
+        return fibo( n - 1 ) + fibo( n - 2 );
+    }
 }
 
-funct helperFun( n ){
-    return fibo( n );
-}
+main();
 
-print( "fibo of 8: " + helperFun( 8 ) );
+print( fibo( 8 ) );

@@ -207,18 +207,18 @@ Interpreter.prototype.evaluateUserDefinedFunction = function( functName, argsLis
     }
     for( i = 0, len = funct.stmtList.length; i < len; i++ ){
         if( typeof funct.stmtList[i] !== 'undefined' && funct.stmtList[i] != null ){
-        if( funct.stmtList[i].type == Token._return ){
-            var rval = this.evaluate( funct.stmtList[i], newContext );
-            break;
-        }
-        else{
-            var stmtRValue = this.evaluate( funct.stmtList[i], newContext );
-            if( stmtRValue != null && typeof stmtRValue == 'object' && stmtRValue.token == 'return' ){
-                // destroy current context before returning.
-                rval = stmtRValue.rvalue;
+            if( funct.stmtList[i].type == Token._return ){
+                var rval = this.evaluate( funct.stmtList[i], newContext );
                 break;
             }
-        }
+            else{
+                var stmtRValue = this.evaluate( funct.stmtList[i], newContext );
+                if( stmtRValue != null && typeof stmtRValue == 'object' && stmtRValue.token == 'return' ){
+                    // destroy current context before returning.
+                    rval = stmtRValue.rvalue;
+                    break;
+                }
+            }
         }
     }
     newContext.destroy();
@@ -249,7 +249,7 @@ Interpreter.prototype.isUserDefined = function( functName, context ){
 Interpreter.prototype.resolve = function( varName, context ){
     var currContext = context.getPLink();
     while( currContext != null ){
-        if( this.hasAttribute( varName, currContext.getHash() ) ){
+        if( this.hasAttribute( currContext.getHash(), varName ) ){
             return currContext.get( varName );
         }
         else{
@@ -269,6 +269,6 @@ Interpreter.prototype.resolveFunctName = function( functName, context ){
     }
     return false;
 }
-
-var interp = new Interpreter( "test.js" );
-interp.execute();
+module.exports = Interpreter;
+//var interp = new Interpreter( "test.js" );
+//interp.execute();
