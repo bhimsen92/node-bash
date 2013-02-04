@@ -19,3 +19,12 @@ funct fibo( n ){
 main();
 
 print( fibo( 8 ) );
+
+funct power( n, p ){
+    return n ^ p;
+}
+
+print( "power: " + power( 5, 2 ) );
+
+addition = 1 + 2 + power( 12, 2 );
+print( "addition: " + addition );
