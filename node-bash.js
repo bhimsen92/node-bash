@@ -5,4 +5,4 @@ if( process.argv.length != 3 ){
 }
 file = process.argv[2];
 node$bash = new Interpreter( file );
-node$bash.execute(); 
+node$bash.execute();
