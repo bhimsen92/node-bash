@@ -29,11 +29,12 @@ and, not, or, if, else, while, funct, |, =, <, >, <=, >=, !=, ==
 Variable Creation
 -----------------
 simple assignment will create variable in the current scope if does not exist.
-  a = 10;
-  #or
-  a = "Hello world";
-  #or
-  a = 1 + 2;
+
+    a = 10;
+    #or
+    a = "Hello world";
+    #or
+    a = 1 + 2;
 
 Operators
 ---------
@@ -49,22 +50,24 @@ The language supports following operations.
 Function Definition
 -------------------
 you can define a function using <b>funct</b> keyword.
-  funct main(){
-    print( "Hello world" );
-  }
+
+    funct main(){
+      print( "Hello world" );
+    }
 
 Piping
 -------
 You can use piping similar to unix piping to pass output of one expression to other.
-  a = "Good morning";
-  a | b;
-  print( b );
-  #or
-  funct generateData(){
-    pipe( "This is node-bash lang" );
-  }
-  generateData() | a;
-  print(a);
+
+    a = "Good morning";
+    a | b;
+    print( b );
+    #or
+    funct generateData(){
+      pipe( "This is node-bash lang" );
+    }
+    generateData() | a;
+    print(a);
   
 source of the pipe statement must be an expression or anything which generates a value but the destination must always
 be a variable or a function call.
