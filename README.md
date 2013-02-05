@@ -16,7 +16,7 @@ To run the language, you must need nodejs.
 
 Usage
 =====
-you can run scripts by executing following scripts.
+you can run scripts by executing following script.
 node node-bash.js < filename >
 
 Tutorial
@@ -39,6 +39,7 @@ simple assignment will create variable in the current scope if does not exist.
 Operators
 ---------
 The language supports following operations.
+
 1. addition ( + )
 2. subtraction ( - )
 3. multiplication ( * ) and division ( / )
@@ -76,6 +77,7 @@ Functions can pipe data using <b>pipe</b> built in function.
 BuiltIn functions
 -----------------
 Following are the builtin functions supported by the languge.
+
 1. print( data );
 2. extractString( src, string_to_be_extracted ); # returns a string.
 3. split( delim );
