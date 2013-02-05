@@ -1,8 +1,11 @@
+var PipeBuffer = require( "./pipebuffer" );
+
 function Context(){
     this.current = {};
     this.current.__userdfs = {};
     this.token = {};
     this.plink = null;
+    this.pipeBuffer = null;
 }
 
 Context.prototype.addContext = function( context ){   
@@ -63,6 +66,40 @@ Context.prototype.tokenExist = function( tok ){
 Context.prototype.destroy = function(){
     this.current.__userdfs = null;
     this.current = this.plink = this.token = null;
+}
+
+Context.prototype.createPipeBuffer = function(){
+    this.pipeBuffer = new PipeBuffer(); 
+}
+
+Context.prototype.destroyPipeBuffer = function(){
+    this.pipeBuffer = null;
+}
+
+Context.prototype.getPipeBuffer = function(){
+    var currContext = this;
+    while( currContext != null ){
+        if( currContext.pipeBuffer != null ){
+            return currContext.pipeBuffer;
+        }
+        else{
+            currContext = currContext.plink;
+        }
+    }
+    return null;
+}
+
+Context.prototype.pipeExist = function(){
+    var currContext = this;
+    while( currContext != null ){
+        if( currContext.pipeBuffer != null ){
+            return true;
+        }
+        else{
+            currContext = currContext.plink;
+        }
+    }
+    return false;
 }
 
 module.exports = Context;

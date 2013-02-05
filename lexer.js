@@ -28,7 +28,8 @@ Ops = {
     dquote : '"'.charCodeAt(0),
     quote : "'".charCodeAt(0),
     complement: '!'.charCodeAt(0),
-    comma: ",".charCodeAt(0)
+    comma: ",".charCodeAt(0),
+    pipe : "|".charCodeAt(0)
 },
 WhiteSpace = {
     space   : ' '.charCodeAt(0),
@@ -225,6 +226,9 @@ Lexer.prototype.readOps = function(){
                             this.forward++;
                             token = Token.neq;
                         }
+                        break;
+        case Ops.pipe:
+                        token = Token.pipe;
                         break;
         case Ops.comma:
                         token = Token.comma;

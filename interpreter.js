@@ -1,6 +1,7 @@
 var Token = require( "./token" ),
     Identifier = require( "./nodes" ).Identifier,
     _Number = require( "./nodes" )._Number,
+    _String = require( "./nodes" )._String,
     Operator = require( "./nodes" ).Operator,
     Parser = require( "./parser" ),
     BuiltIns = require( "./builtins" ),
@@ -161,7 +162,7 @@ Interpreter.prototype.evaluate = function( node, context ){
                         context.addFunct( functName, new UserDefinedFunction( op2, op3, op4 ) );
                         break;
         case Token._return:
-                        // check whether return statement is executed in proper statement.
+                        // check whether return statement is executed in proper context.
                         if( context.tokenExist( "funct" ) ){
                             var rval = this.evaluate( op1, context );
                             return rval;
@@ -170,6 +171,39 @@ Interpreter.prototype.evaluate = function( node, context ){
                             console.warn( "invalid return statement, it can only occur in functions." );
                             throw Error( "return error" );
                         }
+                        break;
+        case Token.pipe:
+                        // create a pipe Buffer
+                        context.createPipeBuffer();
+                        var pipeBuffer = context.getPipeBuffer();
+                        // evaluate the first expression.
+                        var node = op1[0];
+                        if( node.type != Token.funct_call ){
+                            pipeBuffer.enqueue( this.evaluate( node, context ) );
+                        }
+                        else{
+                            this.evaluate( node, context );
+                        }
+                        for( var i = 1; i < op1.length; i++ ){
+                            var data = pipeBuffer.toString();
+                            node = op1[i];
+                            if( node.type == Token.ident ){
+                                this.evaluate( new Operator( Token.equal, node, new _String( data ) ), context );
+                                pipeBuffer.enqueue( data );
+                            }
+                            else if( node.type == Token.funct_call ){
+                                var newArgList = [];
+                                newArgList.push( node.operands[0] );
+                                newArgList.push( [ new _String( data ) ] );
+                                node.operands = newArgList;
+                                this.evaluate( node, context );
+                            }
+                            else{
+                                throw Error( "pipes intermediate expressions must be either function call or identifier." );
+                            }
+                        }
+                        context.destroyPipeBuffer();
+                        break;
     }
 };
 
@@ -227,6 +261,15 @@ Interpreter.prototype.evaluateUserDefinedFunction = function( functName, argsLis
 
 Interpreter.prototype.evaluateBuiltInFunction = function( functName, argsList, context ){
     var args = [];
+    if( functName == "pipe" ){
+        // make sure it is executed in proper context.
+        if( context.pipeExist() ){
+            args.push( context );
+        }
+        else{
+            throw Error( "pipe function can only be used in pipe statement context." );
+        }
+    }
     for( var i = 0, len = argsList.length; i < len; i++ ){
         args.push( this.evaluate( argsList[i], context ) );
     }

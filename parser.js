@@ -21,9 +21,9 @@ Parser.prototype.program = function(){
 Parser.prototype.statementList = function(){
     var nodelist = [],
         node;
-    while( true ){
-        //console.log( "statements" );
+    while( true ){        
         node = this.statement();
+        //console.log( "statements" );
         if( node != null && typeof node != 'undefined' ){
             nodelist.push( node );
         }
@@ -33,13 +33,7 @@ Parser.prototype.statementList = function(){
         }
         if( this.lexer.match( Token.eof ) ){
             break;
-        }/*
-        if( this.lexer.match( Token.semi ) ){
-            this.lexer.advance();
         }
-        else{
-            break;
-        }*/
     }
     return nodelist;
 }
@@ -55,7 +49,7 @@ Parser.prototype.statement = function(){
         /**
             stmt : VARIABLE '=' expression;
         */
-        if( this.lexer.match( Token.ident ) && !this.lexer.peek( Token.ob ) ){
+        if( this.lexer.match( Token.ident ) && !this.lexer.exists( Token.ob, Token.pipe ) ){
             nameNode = new Identifier( this.lexer.lexeme );
             this.lexer.advance();
             if( this.lexer.match( Token.equal ) ){
@@ -202,15 +196,27 @@ Parser.prototype.statement = function(){
             }
         }
         /**
-            stmt : expression;
+            stmt : expression
+                   | pipe;
+            pipe : exp pipe'
+            pipe' : '|' exp pipe'
         */
         else{
             /**
                 !this.lexer.match( Token.fcb ) hack to stop from reading past '{' while parsing while and if else conditions.
             */
-            if( this.lexer.exists( Token.number, Token.string, Token.ident, Token.ob ) && !this.lexer.match( Token.fcb ) ){
-                //console.log( "lexeme: " + this.lexer.lexeme );
+            if( this.lexer.exists( Token.number, Token.string, Token.ident, Token.ob, Token.pipe ) && !this.lexer.match( Token.fcb ) ){
+                //console.log( "before expression called" );
                 nodeStack.push( this.expression() );
+                // check whether '|' is in the buffer.
+                //console.log( "bhimsen" );
+                if( this.lexer.match( Token.pipe ) ){
+                    //console.log( "seen pipe" );
+                    var opr = Token.pipe;
+                    this.lexer.advance();
+                    n1 = nodeStack.pop();
+                    nodeStack.push( this.pipe( opr, n1 ) );
+                }
                 if( this.lexer.match( Token.semi ) ){
                     this.lexer.advance();
                 }
@@ -585,6 +591,22 @@ Parser.prototype.relation = function(){
     this.lexer.advance();
     n2 = this.expression();
     return new Operator( opr, n1, n2 );
+}
+
+Parser.prototype.pipe = function( opr, exprNode ){
+    var expList = [];
+    // lexer pointer has already been advanced, start with this.expression();
+    expList.push( exprNode );
+    while( true ){
+        expList.push( this.expression() );
+        if( this.lexer.match( Token.pipe ) ){
+            this.lexer.advance();
+        }
+        else{
+            break;
+        }
+    }
+    return new Operator( opr, expList );
 }
 
 module.exports = Parser;
