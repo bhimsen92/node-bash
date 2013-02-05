@@ -1,8 +1,9 @@
-var Interpreter = require( "./interpreter" );
+var Interpreter = require( "./lib/interpreter" );
 
 if( process.argv.length != 3 ){
-    throw Error( "Usage node node-bash.js <filename>" );
+	throw Error( "Usage node node-bash.js <file>" );
 }
 file = process.argv[2];
-node$bash = new Interpreter( file );
-node$bash.execute();
+interp = new Interpreter( file );
+
+interp.execute();
