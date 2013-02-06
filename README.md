@@ -86,3 +86,32 @@ Following are the builtin functions supported by the languge.
 
 Examples
 ========
+
+Fibonacci series Recursively
+----------------------------
+
+    funct fibo( n ){
+        if( n == 0 ){
+            return 0;
+        }
+        if( n == 1 ){
+            return 1;
+        }
+        else{
+            return fibo( n - 2 ) + fibo( n - 1 );
+        }
+    }
+    print( fibo(8) );
+
+Simple arithmatic expressions
+-----------------------------
+    # addition
+    a = 1 + 2; 
+    # multiplication
+    a = 1 * 2 * 4;
+    #division
+    a = 4 / 2;
+    # exponantiation
+    a = 4 ^ 2;
+    # subtraction
+    a = 4 - 2;
